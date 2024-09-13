@@ -1,5 +1,6 @@
 package de.androidcrypto.androidbasicnfcreader;
 
+import android.content.Context;
 import android.content.Intent;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
@@ -8,7 +9,10 @@ import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NfcA;
 import android.nfc.tech.NfcV;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.Settings;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         output += "Tag UID length: " + tagUid.length  + " UID: " + bytesToHex(tagUid) + "\n";
         String[] techlist = tag.getTechList();
         output += lineDivider + "\n";
-        output += "The TechList contains " + techlist.length + " entry/ies" + "\n";
+        output += "The TechList contains " + techlist.length + " entry/ies:" + "\n";
         for (int i = 0; i < techlist.length; i++) {
             output += "Entry " + i + ": " + techlist[i]  + "\n";
         }
@@ -161,7 +165,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         runOnUiThread(() -> {
             textView.setText(finalOutput);
         });
-
+        // output of the logfile to console
+        System.out.println(output);
+        // a short information about the detection of an NFC tag after all reading is done
+        vibrateShort();
     }
 
     /**
@@ -228,5 +235,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         for (byte b : bytes)
             result.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
         return result.toString();
+    }
+
+    public void vibrateShort() {
+        // Make a Sound
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(50, 10));
+        } else {
+            Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            v.vibrate(50);
+        }
     }
 }
