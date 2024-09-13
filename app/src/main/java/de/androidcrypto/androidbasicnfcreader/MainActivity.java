@@ -1,7 +1,8 @@
 package de.androidcrypto.androidbasicnfcreader;
 
-import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
@@ -9,10 +10,7 @@ import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NfcA;
 import android.nfc.tech.NfcV;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -84,7 +82,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             byte[] atqa = nfcA.getAtqa();
             byte sak = (byte) nfcA.getSak();
             int maxTransceiveLength = nfcA.getMaxTransceiveLength();
-
             output += "-= NfcA Technology =-" + "\n";
             output += "ATQA: " + bytesToHex(atqa) + "\n";
             output += "SAK: " + byteToHex(sak) + "\n";
@@ -168,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         // output of the logfile to console
         System.out.println(output);
         // a short information about the detection of an NFC tag after all reading is done
-        vibrateShort();
+        playBeep();
     }
 
     /**
@@ -179,16 +176,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     @Override
     protected void onResume() {
         super.onResume();
-
         if (myNfcAdapter != null) {
-
             if (!myNfcAdapter.isEnabled())
                 showWirelessSettings();
-
             Bundle options = new Bundle();
             // Work around for some broken Nfc firmware implementations that poll the card too fast
             options.putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250);
-
             // Enable ReaderMode for all types of card and disable platform sounds
             // The option NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK is NOT set
             // to get the data of the tag after reading
@@ -237,13 +230,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         return result.toString();
     }
 
-    public void vibrateShort() {
-        // Make a Sound
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(50, 10));
-        } else {
-            Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            v.vibrate(50);
-        }
+    public void playBeep() {
+        ToneGenerator toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
+        toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 150);
     }
 }
