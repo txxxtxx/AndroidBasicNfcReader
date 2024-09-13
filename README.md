@@ -7,8 +7,8 @@ modern **Reader Mode** NFC communication.
 
 This is from an answer by *[Andrew](https://stackoverflow.com/users/2373819/andrew)* regarding the two modes:
 
-*Also note that using enableForegroundDispatch is actually not the best way to use NFC using enableReaderMode is a newer and much better API 
-to use NFC.enableReaderMode does not use Intent's and gives you more control, it is easy to do NFC operations in a background Thread (which 
+*Also note that using enableForegroundDispatch is actually not the best way to use NFC. Using enableReaderMode is a newer and much better API 
+to use. NFC.enableReaderMode does not use Intent's and gives you more control, it is easy to do NFC operations in a background Thread (which 
 is recommended), for writing to NFC Tag's it is much more reliable and leads to less errors.*
 
 There are 4 simples steps to **implement the Reader mode**:
