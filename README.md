@@ -15,9 +15,9 @@ There are 3 simples steps to follow the Reader mode:
 
 1) in `AndroidManifest.xml` add one line:
 2) in your activity or fragment expand your class definition by `asd`
-3) for minimum implement an `onTagDetected` method wehre all the work with the tag is done.
+3) for minimum implement an `onTagDetected` method where all the work with the tag is done.
 
-Note: the `onTagDetected` method is not running on User Interface (UI) thread, so you are not allowed to write directly to any UI elements like 
-e.g. TextViews or Toasts - you need to encapsulate them in a `run onUiTHread` construct.
+Note: the `onTagDetected` method is not running on the User Interface (UI) thread, so you are not allowed to write directly to any UI elements like 
+e.g. TextViews or Toasts - you need to encapsulate them in a `run onUiTHread` construct. This method is running in an background thread.
 
 
