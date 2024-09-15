@@ -8,7 +8,7 @@ This is from an answer by *[Andrew](https://stackoverflow.com/users/2373819/andr
 
 *Also note that using enableForegroundDispatch is actually not the best way to use NFC. Using enableReaderMode is a newer and much better API to use. NFC.enableReaderMode does not use Intent's and gives you more control, it is easy to do NFC operations in a background Thread (which is recommended), for writing to NFC Tag's it is much more reliable and leads to less errors.*
 
-This application is described in an tutorial on medium.com: **How to use NFC Reader Mode in Android to connect to NFC tags (Java)**
+This application is described in an tutorial on medium.com: **[How to use NFC Reader Mode in Android to connect to NFC tags (Java)](https://medium.com/@androidcrypto/how-to-use-nfc-reader-mode-in-android-to-connect-to-nfc-tags-java-d70641a5def4)**
 
 There are 4 simples steps to **implement the Reader mode**:
 
