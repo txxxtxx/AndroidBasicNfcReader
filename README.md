@@ -2,14 +2,13 @@
 
 This is a simple app showing how to detect and read some data from an NFC tag tapped to the Android's NFC reader.
 
-As there are a lot of questions on Stackoverflow.com that use an **Intent-based** NFC detection system I'm showing here how to use the more 
-modern **Reader Mode** NFC communication.
+As there are a lot of questions on Stackoverflow.com that use an **Intent-based** NFC detection system I'm showing here how to use the more modern **Reader Mode** for NFC communication.
 
 This is from an answer by *[Andrew](https://stackoverflow.com/users/2373819/andrew)* regarding the two modes:
 
-*Also note that using enableForegroundDispatch is actually not the best way to use NFC. Using enableReaderMode is a newer and much better API 
-to use. NFC.enableReaderMode does not use Intent's and gives you more control, it is easy to do NFC operations in a background Thread (which 
-is recommended), for writing to NFC Tag's it is much more reliable and leads to less errors.*
+*Also note that using enableForegroundDispatch is actually not the best way to use NFC. Using enableReaderMode is a newer and much better API to use. NFC.enableReaderMode does not use Intent's and gives you more control, it is easy to do NFC operations in a background Thread (which is recommended), for writing to NFC Tag's it is much more reliable and leads to less errors.*
+
+This application is described in an tutorial on medium.com: **How to use NFC Reader Mode in Android to connect to NFC tags (Java)**
 
 There are 4 simples steps to **implement the Reader mode**:
 
@@ -50,7 +49,7 @@ The last flag `NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS` is useful for a better
 the **Intent based** mode a system sound will appear when the NFC tag is detected **at the beginning**. 
 This causes some uses to move the NFC tag out of the reader field and you receive a "Tag Lost Exception". 
 When using the **Reader Mode** the flag prohibits the device to give any feedback to the user. In my app 
-I'm running a short *beep* **at the end** or the reading process, signalizing that everything is done. 
+I'm playing a short *beep* **at the end** or the reading process, signalizing that everything is done. 
 
 Note: **the `onTagDetected` method is not running on the User Interface (UI) thread**, so you are not allowed to write directly to any UI elements like 
 e.g. TextViews or Toasts - you need to encapsulate them in a `run onUiTHread` construct. This method is running in an background thread:
@@ -153,8 +152,9 @@ if (ndef == null) {
 }                                                                                                    
 ```
 
+## Screen after reading a tag with an NDEF message
 
-`f`: 
+![Screen of the Main](screenshot/small/app_home_01.png)
 
 ## Example outputs for some tag types
 
