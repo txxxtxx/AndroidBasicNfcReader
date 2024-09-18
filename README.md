@@ -284,3 +284,7 @@ Connected to the tag using NfcV technology
 This tag is NOT supporting the NDEF class
 --------------------
 ```
+
+## License
+
+Android Basic NFC Reader available under the MIT license. See the LICENSE.md file for more info.
