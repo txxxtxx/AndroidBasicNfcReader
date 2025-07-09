@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "de.androidcrypto.androidbasicnfcreader"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.androidcrypto.androidbasicnfcreader"
