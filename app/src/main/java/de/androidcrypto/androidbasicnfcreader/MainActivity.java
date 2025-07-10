@@ -26,7 +26,7 @@ public class MainActivity extends BaseNfcActivity implements View.OnClickListene
         } else if (v.getId() == R.id.button2) {//读写MifareClassic格式
             startActivity(new Intent(this, MifareClassicActivity.class));
         } else if (v.getId() == R.id.button3) {//读写MifareClassic格式
-            startActivity(new Intent(this, NFCAActivity.class));
+            startActivity(new Intent(this, MifareUltralightActivity.class));
         }
     }
 }

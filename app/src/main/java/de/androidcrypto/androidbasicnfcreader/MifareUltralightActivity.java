@@ -1,6 +1,5 @@
 package de.androidcrypto.androidbasicnfcreader;
 
-import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
@@ -21,7 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class NFCAActivity extends AppCompatActivity {
+public class MifareUltralightActivity extends AppCompatActivity {
     private static final String TAG = "MifareActivity";
     private NfcAdapter nfcAdapter;
     private Tag tag;
@@ -52,11 +51,11 @@ public class NFCAActivity extends AppCompatActivity {
 
         button.setOnClickListener(view -> {
             if (tag == null) {
-                Toast.makeText(NFCAActivity.this, "NFC已断开", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MifareUltralightActivity.this, "NFC已断开", Toast.LENGTH_SHORT).show();
             } else if (TextUtils.isEmpty(editTextAddress.getText())) {
-                Toast.makeText(NFCAActivity.this, "输入地址", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MifareUltralightActivity.this, "输入地址", Toast.LENGTH_SHORT).show();
             } else if (TextUtils.isEmpty(editTextValue.getText())) {
-                Toast.makeText(NFCAActivity.this, "输入值", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MifareUltralightActivity.this, "输入值", Toast.LENGTH_SHORT).show();
             }
             writeToTag(tag, Integer.parseInt(editTextAddress.getText().toString()), editTextValue.getText().toString());
         });
@@ -171,13 +170,13 @@ public class NFCAActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> {
                     textView.setText(result);
-                    Toast.makeText(NFCAActivity.this, "读取成功", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "读取成功", Toast.LENGTH_SHORT).show();
                 });
 
             } catch (IOException e) {
                 Log.e(TAG, "读取标签失败", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(NFCAActivity.this, "读取标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "读取标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
             } finally {
                 try {
@@ -235,13 +234,13 @@ public class NFCAActivity extends AppCompatActivity {
                 mifare.writePage(page, sub);
 
                 runOnUiThread(() -> {
-                    Toast.makeText(NFCAActivity.this, "写入成功", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "写入成功", Toast.LENGTH_SHORT).show();
                 });
 
             } catch (IOException e) {
                 Log.e(TAG, "写入标签失败", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(NFCAActivity.this, "写入标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "写入标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
             } finally {
                 try {
@@ -317,13 +316,13 @@ public class NFCAActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> {
-                    Toast.makeText(NFCAActivity.this, "写入成功", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "写入成功", Toast.LENGTH_SHORT).show();
                 });
 
             } catch (IOException e) {
                 Log.e(TAG, "写入标签失败", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(NFCAActivity.this, "写入标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MifareUltralightActivity.this, "写入标签失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
             } finally {
                 try {

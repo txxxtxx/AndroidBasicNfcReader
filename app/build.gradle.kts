@@ -40,4 +40,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+    debugImplementation(libs.leakcanary.android)
+    // 如果你需要在 release 版本中也进行检测
+    releaseImplementation(libs.leakcanary.android.no.op)
 }
