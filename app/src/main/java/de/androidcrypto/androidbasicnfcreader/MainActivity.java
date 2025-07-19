@@ -17,6 +17,7 @@ public class MainActivity extends BaseNfcActivity implements View.OnClickListene
         findViewById(R.id.button).setOnClickListener(this);
         findViewById(R.id.button2).setOnClickListener(this);
         findViewById(R.id.button3).setOnClickListener(this);
+        findViewById(R.id.button4).setOnClickListener(this);
     }
 
     @Override
@@ -27,6 +28,8 @@ public class MainActivity extends BaseNfcActivity implements View.OnClickListene
             startActivity(new Intent(this, MifareClassicActivity.class));
         } else if (v.getId() == R.id.button3) {//读写MifareClassic格式
             startActivity(new Intent(this, MifareUltralightActivity.class));
+        } else if (v.getId() == R.id.button4) {//读写MifareClassic格式
+            startActivity(new Intent(this, NfcVActivity.class));
         }
     }
 }

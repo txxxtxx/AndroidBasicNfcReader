@@ -19,6 +19,21 @@
         android:theme="@style/Theme.AndroidBasicNfcReader"
         tools:targetApi="31">
         <activity
+            android:name=".NfcVActivity"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/tech_list" />
+        </activity>
+        <activity
             android:name=".CrashActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
@@ -37,8 +52,7 @@
         <activity
             android:name=".NdefActivity"
             android:exported="false"
-            android:label="读写NDEF格式"
-            android:launchMode="singleTop">
+            android:label="读写NDEF格式">
             <intent-filter>
 
                 <!-- 配置Activity处理Tag的优先级 -->
@@ -50,8 +64,7 @@
         <activity
             android:name=".MifareClassicActivity"
             android:exported="false"
-            android:label="读写MIFARECLASSIC格式"
-            android:launchMode="singleTop">
+            android:label="读写MIFARECLASSIC格式">
             <intent-filter>
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
 
