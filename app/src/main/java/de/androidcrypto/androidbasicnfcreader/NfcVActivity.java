@@ -3,22 +3,31 @@ package de.androidcrypto.androidbasicnfcreader;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.NfcV;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class NfcVActivity extends AppCompatActivity {
-
+    private static final String TAG = "NfcVActivity";
     private NfcAdapter nfcAdapter;
     private TextView logTextView;
     private Handler mainHandler;
+    private Tag tag;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +51,25 @@ public class NfcVActivity extends AppCompatActivity {
         if (!nfcAdapter.isEnabled()) {
             showToast("请在设置中启用 NFC");
         }
+
+        TextView textAddress = findViewById(R.id.edit_text_address);
+        TextView textValue = findViewById(R.id.edit_text_value);
+        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (tag == null) {
+                    showToast("连接已断开");
+                    return;
+                } else if (TextUtils.isEmpty(textAddress.getText())) {
+                    showToast("输入地址");
+                    return;
+                } else if (TextUtils.isEmpty(textValue.getText())) {
+                    showToast("输入值");
+                    return;
+                }
+                writeToTag(Integer.parseInt(textAddress.getText().toString()), textValue.getText().toString());
+            }
+        });
     }
 
     @Override
@@ -59,7 +87,7 @@ public class NfcVActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         logMessage("检测到 NFC 标签");
         handleNfcIntent(intent);
@@ -68,8 +96,7 @@ public class NfcVActivity extends AppCompatActivity {
     private void enableNfcForegroundDispatch() {
         Intent intent = new Intent(this, getClass());
         intent.addFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING);
-        android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
-                this, 0, intent, android.app.PendingIntent.FLAG_MUTABLE);
+        android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(this, 0, intent, android.app.PendingIntent.FLAG_MUTABLE);
         nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
     }
 
@@ -79,11 +106,8 @@ public class NfcVActivity extends AppCompatActivity {
 
     private void handleNfcIntent(Intent intent) {
         String action = intent.getAction();
-        if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action) ||
-                NfcAdapter.ACTION_TECH_DISCOVERED.equals(action) ||
-                NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
-
-            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action) || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
+            tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tag != null) {
                 // 检查标签是否支持 NfcV 技术
                 String[] techList = tag.getTechList();
@@ -98,7 +122,7 @@ public class NfcVActivity extends AppCompatActivity {
                 if (hasNfcV) {
                     logMessage("发现 NFCV (ISO 15693) 标签");
                     // 在后台线程处理 NFC 操作，避免阻塞 UI
-                    new Thread(() -> handleNfcVTag(tag)).start();
+                    new Thread(() -> handleNfcVTag(0)).start();
                 } else {
                     logMessage("发现不支持的标签类型");
                     showToast("不支持的标签类型，需要 NFCV (ISO 15693) 标签");
@@ -107,61 +131,67 @@ public class NfcVActivity extends AppCompatActivity {
         }
     }
 
-    private void handleNfcVTag(Tag tag) {
+    private static final int MAX_RETRIES = 3;
+
+    private void handleNfcVTag(int retries) {
+        if (retries >= MAX_RETRIES) return;
         NfcV nfcv = NfcV.get(tag);
         try {
             // 连接标签
             nfcv.connect();
             logMessage("已连接到标签");
 
+            NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
+
             // 读取标签 UID
-            byte[] uid = readTagUID(nfcv);
-            if (uid != null) {
-                logMessage("标签 UID: " + bytesToHex(uid));
+            String uid = nfcVUtil.getUID();
+            if (!TextUtils.isEmpty(uid)) {
+                logMessage("标签 UID: " + uid);
             }
 
             // 读取标签信息
-            byte[] info = getTagInfo(nfcv);
-            if (info != null) {
-                logMessage("标签信息: " + bytesToHex(info));
-                // 解析标签信息 (取决于具体标签类型)
-                parseTagInfo(info);
-            }
+            logMessage("标签信息: " + bytesToHex(nfcVUtil.getInfoRmation()));
+            logMessage("标签容量: " + nfcVUtil.getBlockNumber() + " 块, 每块 " + nfcVUtil.getOneBlockSize() + " 字节");
+            logMessage("系统信息: " + nfcVUtil.getAFI());
 
             // 读取数据块
             int blockAddress = 0; // 从块 0 开始
-            int blockCount = 4;   // 读取 4 个块
+            int blockCount = nfcVUtil.getBlockNumber();   // 读取 4 个块
             for (int i = 0; i < blockCount; i++) {
-                byte[] blockData = readBlock(nfcv, blockAddress + i);
-                if (blockData != null) {
-                    logMessage("块 " + (blockAddress + i) + " 数据: " + bytesToHex(blockData));
-
-                    // 如果是第一个块，尝试写入数据
-                    if (i == 0) {
-                        // 准备要写入的数据 (示例: "Hello")
-                        byte[] dataToWrite = "Hello".getBytes(StandardCharsets.UTF_8);
-                        // 确保数据长度不超过块大小 (通常为 4 或 8 字节)
-                        byte[] paddedData = Arrays.copyOf(dataToWrite, 4);
-
-                        boolean writeSuccess = writeBlock(nfcv, blockAddress + i, paddedData);
-                        if (writeSuccess) {
-                            logMessage("成功写入块 " + (blockAddress + i));
-
-                            // 验证写入结果
-                            byte[] verifiedData = readBlock(nfcv, blockAddress + i);
-                            if (verifiedData != null) {
-                                logMessage("验证写入: " + bytesToHex(verifiedData));
-                            }
-                        } else {
-                            logMessage("写入块 " + (blockAddress + i) + " 失败");
-                        }
-                    }
-                }
+                String blockMsg = nfcVUtil.readOneBlock(blockAddress + i);
+                logMessage("地址 " + (blockAddress + i) * 4 + " 数据: " + blockMsg);
+//                byte[] blockData = readBlock(nfcv, blockAddress + i);
+//                if (blockData != null) {
+//                    logMessage("块 " + (blockAddress + i) + " 数据: " + bytesToHex(blockData));
+//
+//                    // 如果是第一个块，尝试写入数据
+//                    if (i == 0) {
+//                        // 准备要写入的数据 (示例: "Hello")
+//                        byte[] dataToWrite = "Hello".getBytes(StandardCharsets.UTF_8);
+//                        // 确保数据长度不超过块大小 (通常为 4 或 8 字节)
+//                        byte[] paddedData = Arrays.copyOf(dataToWrite, 4);
+//
+//                        boolean writeSuccess = writeBlock(nfcv, blockAddress + i, paddedData);
+//                        if (writeSuccess) {
+//                            logMessage("成功写入块 " + (blockAddress + i));
+//
+//                            // 验证写入结果
+//                            byte[] verifiedData = readBlock(nfcv, blockAddress + i);
+//                            if (verifiedData != null) {
+//                                logMessage("验证写入: " + bytesToHex(verifiedData));
+//                            }
+//                        } else {
+//                            logMessage("写入块 " + (blockAddress + i) + " 失败");
+//                        }
+//                    }
+//                }
             }
 
         } catch (IOException e) {
             logMessage("NFC 操作错误: " + e.getMessage());
             e.printStackTrace();
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(() -> handleNfcVTag(retries + 1), 500);
         } finally {
             try {
                 // 关闭连接
@@ -173,12 +203,43 @@ public class NfcVActivity extends AppCompatActivity {
         }
     }
 
+    private void writeToTag(int address, String message) {
+        new Thread(() -> {
+            NfcV nfcv = NfcV.get(tag);
+            try {
+                nfcv.connect();
+                runOnUiThread(() -> logMessage("已连接到标签"));
+
+                NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
+
+                byte[] cmd = new byte[4];
+                int position = address / 4;
+                int index = address % 4;
+                cmd[index] = (byte) Integer.parseInt(message);
+                nfcVUtil.writeBlock(position, cmd);
+
+                runOnUiThread(() -> showToast("写入成功"));
+
+            } catch (IOException e) {
+                Log.e(TAG, "写入标签失败", e);
+                runOnUiThread(() -> showToast("写入标签失败: " + e.getMessage()));
+            } finally {
+                try {
+                    nfcv.close();
+                    runOnUiThread(() -> logMessage("已断开与标签的连接"));
+                } catch (IOException e) {
+                    Log.e(TAG, "关闭连接失败", e);
+                }
+            }
+        }).start();
+    }
+
     private byte[] readTagUID(NfcV nfcv) throws IOException {
         // ISO 15693 标准命令: 读取 UID
-        byte[] cmd = new byte[]{0x00, (byte)0x2B}; // 标志位 + 命令码 0x2B (Get UID)
+        byte[] cmd = new byte[]{0, 43}; // 标志位 + 命令码 0x2B (Get UID)
         byte[] response = nfcv.transceive(cmd);
 
-        if (response != null && response.length > 0 && response[0] == 0x00) {
+        if (response != null && response.length > 0 && response[0] == 0) {
             // 成功响应: 状态码 (0x00) + UID 数据
             return Arrays.copyOfRange(response, 1, response.length);
         }
@@ -187,10 +248,15 @@ public class NfcVActivity extends AppCompatActivity {
 
     private byte[] getTagInfo(NfcV nfcv) throws IOException {
         // ISO 15693 标准命令: 获取标签信息
-        byte[] cmd = new byte[]{0x00, (byte)0x2A}; // 标志位 + 命令码 0x2A (Get System Information)
+//        byte[] cmd = new byte[]{0, 42}; // 标志位 + 命令码 0x2A (Get System Information)
+        byte[] cmd = new byte[10];
+        cmd[0] = (byte) 0x22;
+        cmd[1] = (byte) 0x2B;
+        NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
+        System.arraycopy(nfcVUtil.getID(), 0, cmd, 2, nfcVUtil.getID().length);
         byte[] response = nfcv.transceive(cmd);
 
-        if (response != null && response.length > 0 && response[0] == 0x00) {
+        if (response != null && response.length > 0 && response[0] == 0) {
             // 成功响应: 状态码 (0x00) + 标签信息
             return Arrays.copyOfRange(response, 1, response.length);
         }
@@ -212,10 +278,10 @@ public class NfcVActivity extends AppCompatActivity {
 
     private byte[] readBlock(NfcV nfcv, int blockAddress) throws IOException {
         // ISO 15693 标准命令: 读取单个块
-        byte[] cmd = new byte[]{0x00, (byte)0x20, (byte)blockAddress}; // 标志位 + 命令码 0x20 + 块地址
+        byte[] cmd = new byte[]{0, 32, (byte) blockAddress}; // 标志位 + 命令码 0x20 + 块地址
         byte[] response = nfcv.transceive(cmd);
 
-        if (response != null && response.length > 0 && response[0] == 0x00) {
+        if (response != null && response.length > 0 && response[0] == 0) {
             // 成功响应: 状态码 (0x00) + 块数据
             return Arrays.copyOfRange(response, 1, response.length);
         }
@@ -230,8 +296,8 @@ public class NfcVActivity extends AppCompatActivity {
         // ISO 15693 标准命令: 写入单个块
         byte[] cmd = new byte[6];
         cmd[0] = 0x00;           // 标志位
-        cmd[1] = (byte)0x21;     // 命令码 0x21 (Write Single Block)
-        cmd[2] = (byte)blockAddress; // 块地址
+        cmd[1] = (byte) 0x21;     // 命令码 0x21 (Write Single Block)
+        cmd[2] = (byte) blockAddress; // 块地址
         System.arraycopy(data, 0, cmd, 3, 4); // 数据
 
         byte[] response = nfcv.transceive(cmd);
