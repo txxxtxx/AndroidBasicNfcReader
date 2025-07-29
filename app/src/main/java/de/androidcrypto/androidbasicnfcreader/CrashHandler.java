@@ -73,7 +73,9 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
 
     private void showCrashDialog(Throwable e) {
         Intent intent = new Intent(context, CrashActivity.class);
-        intent.putExtra("error_message", getStackTrace(e));
+        String errorMsg = getStackTrace(e);
+        Log.e(TAG, errorMsg);
+        intent.putExtra("error_message", errorMsg);
 //        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);

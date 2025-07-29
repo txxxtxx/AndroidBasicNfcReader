@@ -28,6 +28,7 @@ public class NfcVActivity extends AppCompatActivity {
     private TextView logTextView;
     private Handler mainHandler;
     private Tag tag;
+    private Boolean isProcess = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +61,9 @@ public class NfcVActivity extends AppCompatActivity {
                 if (tag == null) {
                     showToast("连接已断开");
                     return;
+                } else if (isProcess) {
+                    showToast("正在处理其他任务，请稍后再试");
+                    return;
                 } else if (TextUtils.isEmpty(textAddress.getText())) {
                     showToast("输入地址");
                     return;
@@ -67,7 +71,9 @@ public class NfcVActivity extends AppCompatActivity {
                     showToast("输入值");
                     return;
                 }
-                writeToTag(Integer.parseInt(textAddress.getText().toString()), textValue.getText().toString());
+                int address = Integer.parseInt(textAddress.getText().toString());
+                String message = textValue.getText().toString();
+                new Thread(() -> writeToTag(address, message)).start();
             }
         });
     }
@@ -121,6 +127,10 @@ public class NfcVActivity extends AppCompatActivity {
 
                 if (hasNfcV) {
                     logMessage("发现 NFCV (ISO 15693) 标签");
+                    if (isProcess) {
+                        showToast("操作太频繁，请稍后再试");
+                        return;
+                    }
                     // 在后台线程处理 NFC 操作，避免阻塞 UI
                     new Thread(() -> handleNfcVTag(0)).start();
                 } else {
@@ -135,10 +145,10 @@ public class NfcVActivity extends AppCompatActivity {
 
     private void handleNfcVTag(int retries) {
         if (retries >= MAX_RETRIES) return;
-        NfcV nfcv = NfcV.get(tag);
-        try {
+        try (NfcV nfcv = NfcV.get(tag)) {
             // 连接标签
             nfcv.connect();
+            isProcess = true;
             logMessage("已连接到标签");
 
             NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
@@ -157,34 +167,9 @@ public class NfcVActivity extends AppCompatActivity {
             // 读取数据块
             int blockAddress = 0; // 从块 0 开始
             int blockCount = nfcVUtil.getBlockNumber();   // 读取 4 个块
-            for (int i = 0; i < blockCount; i++) {
+            for (int i = blockAddress; i < blockCount; i++) {
                 String blockMsg = nfcVUtil.readOneBlock(blockAddress + i);
                 logMessage("地址 " + (blockAddress + i) * 4 + " 数据: " + blockMsg);
-//                byte[] blockData = readBlock(nfcv, blockAddress + i);
-//                if (blockData != null) {
-//                    logMessage("块 " + (blockAddress + i) + " 数据: " + bytesToHex(blockData));
-//
-//                    // 如果是第一个块，尝试写入数据
-//                    if (i == 0) {
-//                        // 准备要写入的数据 (示例: "Hello")
-//                        byte[] dataToWrite = "Hello".getBytes(StandardCharsets.UTF_8);
-//                        // 确保数据长度不超过块大小 (通常为 4 或 8 字节)
-//                        byte[] paddedData = Arrays.copyOf(dataToWrite, 4);
-//
-//                        boolean writeSuccess = writeBlock(nfcv, blockAddress + i, paddedData);
-//                        if (writeSuccess) {
-//                            logMessage("成功写入块 " + (blockAddress + i));
-//
-//                            // 验证写入结果
-//                            byte[] verifiedData = readBlock(nfcv, blockAddress + i);
-//                            if (verifiedData != null) {
-//                                logMessage("验证写入: " + bytesToHex(verifiedData));
-//                            }
-//                        } else {
-//                            logMessage("写入块 " + (blockAddress + i) + " 失败");
-//                        }
-//                    }
-//                }
             }
 
         } catch (IOException e) {
@@ -193,45 +178,40 @@ public class NfcVActivity extends AppCompatActivity {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.postDelayed(() -> handleNfcVTag(retries + 1), 500);
         } finally {
-            try {
-                // 关闭连接
-                nfcv.close();
-                logMessage("已断开与标签的连接");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            isProcess = false;
+            logMessage("已断开与标签的连接");
         }
     }
 
     private void writeToTag(int address, String message) {
-        new Thread(() -> {
-            NfcV nfcv = NfcV.get(tag);
+        NfcV nfcv = NfcV.get(tag);
+        try {
+            nfcv.connect();
+            isProcess = true;
+            logMessage("已连接到标签");
+
+            NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
+
+            byte[] cmd = new byte[4];
+            int position = address / 4;
+            int index = address % 4;
+            cmd[index] = (byte) Integer.parseInt(message);
+            nfcVUtil.writeBlock(position, cmd);
+
+            showToast("写入成功");
+
+        } catch (IOException e) {
+            Log.e(TAG, "写入标签失败", e);
+            showToast("写入标签失败: " + e.getMessage());
+        } finally {
             try {
-                nfcv.connect();
-                runOnUiThread(() -> logMessage("已连接到标签"));
-
-                NfcVUtil nfcVUtil = new NfcVUtil(nfcv);
-
-                byte[] cmd = new byte[4];
-                int position = address / 4;
-                int index = address % 4;
-                cmd[index] = (byte) Integer.parseInt(message);
-                nfcVUtil.writeBlock(position, cmd);
-
-                runOnUiThread(() -> showToast("写入成功"));
-
+                nfcv.close();
+                isProcess = false;
+                logMessage("已断开与标签的连接");
             } catch (IOException e) {
-                Log.e(TAG, "写入标签失败", e);
-                runOnUiThread(() -> showToast("写入标签失败: " + e.getMessage()));
-            } finally {
-                try {
-                    nfcv.close();
-                    runOnUiThread(() -> logMessage("已断开与标签的连接"));
-                } catch (IOException e) {
-                    Log.e(TAG, "关闭连接失败", e);
-                }
+                Log.e(TAG, "关闭连接失败", e);
             }
-        }).start();
+        }
     }
 
     private byte[] readTagUID(NfcV nfcv) throws IOException {
