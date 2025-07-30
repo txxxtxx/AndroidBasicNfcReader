@@ -3,6 +3,7 @@ package de.androidcrypto.androidbasicnfcreader;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.NfcV;
 import android.os.Bundle;
@@ -93,6 +94,16 @@ public class NfcVActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        //在页面结束时 清空队列消息
+        if (mainHandler != null) {
+            mainHandler.removeCallbacksAndMessages(null);
+            mainHandler = null;
+        }
+    }
+
+    @Override
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         logMessage("检测到 NFC 标签");
@@ -166,11 +177,14 @@ public class NfcVActivity extends AppCompatActivity {
 
             // 读取数据块
             int blockAddress = 0; // 从块 0 开始
-            int blockCount = nfcVUtil.getBlockNumber();   // 读取 4 个块
+            int blockCount = blockAddress + 1030/*nfcVUtil.getBlockNumber()*/;   // 读取 4 个块
+            StringBuilder msg = new StringBuilder();
             for (int i = blockAddress; i < blockCount; i++) {
                 String blockMsg = nfcVUtil.readOneBlock(blockAddress + i);
-                logMessage("地址 " + (blockAddress + i) * 4 + " 数据: " + blockMsg);
+                msg.append("地址 ").append((blockAddress + i) * 4).append(" 数据: ").append(blockMsg).append("/n");
+//                logMessage("地址 " + (blockAddress + i) * 4 + " 数据: " + blockMsg);
             }
+            logMessage(msg.toString());
 
         } catch (IOException e) {
             logMessage("NFC 操作错误: " + e.getMessage());
@@ -196,7 +210,7 @@ public class NfcVActivity extends AppCompatActivity {
             int position = address / 4;
             int index = address % 4;
             cmd[index] = (byte) Integer.parseInt(message);
-            nfcVUtil.writeBlock(position, cmd);
+            nfcVUtil.writeBlock((byte) position, cmd);
 
             showToast("写入成功");
 
